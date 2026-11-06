@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Campus Security System{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="dashboard-title">Campus Security Control Center</h1>
+        <p class="dashboard-subtitle">Real-time access monitoring, personnel verification & alert status</p>
+    </div>
+    <div class="status-pills">
+        <div class="mode-badge {% if stats.hardware_mode == 'VIRTUAL' %}virtual{% else %}physical{% endif %}">
+            <span class="status-dot"></span>
+            Mode: {{ stats.hardware_mode }} SIMULATOR
+        </div>
+    </div>
+</div>
+
+<!-- Metrics Cards Grid -->
+<div class="metrics-grid">
+    <div class="card">
+        <div class="card-title">Registered Personnel</div>
+        <div class="card-value">{{ stats.registered_count }}</div>
+        <div class="card-desc">Active authorized students & staff</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Authorized Entries</div>
+        <div class="card-value">{{ stats.entry_logs_count }}</div>
+        <div class="card-desc">Total recorded entry events</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Unknown Intruder Alerts</div>
+        <div class="card-value" style="color: var(--accent-red);">{{ stats.unknown_alerts_count }}</div>
+        <div class="card-desc">{{ stats.unresolved_alerts_count }} unresolved alerts</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Hardware Logs</div>
+        <div class="card-value" style="color: var(--accent-purple);">{{ stats.hardware_logs_count }}</div>
+        <div class="card-desc">Buzzer & system events</div>
+    </div>
+</div>
+
+<!-- Recent Logs & System Overview Grid -->
+<div class="tables-grid">
+    <!-- Recent Entry Logs Table -->
+    <div class="table-wrapper">
+        <div style="padding: 1.25rem 1.25rem 0.5rem 1.25rem;">
+            <h2 class="section-title"><span>📥</span> Recent Authorized Entries</h2>
+        </div>
+        {% if recent_entries %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Name & ID</th>
+                    <th>Role</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in recent_entries %}
+                <tr>
+                    <td style="font-size: 0.82rem; color: var(--text-muted);">{{ entry.timestamp }}</td>
+                    <td>
+                        <strong>{{ entry.full_name }}</strong><br>
+                        <small style="color: var(--text-muted);">{{ entry.person_id }}</small>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ entry.role.lower() }}">{{ entry.role }}</span>
+                    </td>
+                    <td>{{ "%.2f"|format(entry.confidence_score) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No authorized entry logs recorded yet.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Unknown Intruder Alerts Table -->
+    <div class="table-wrapper">
+        <div style="padding: 1.25rem 1.25rem 0.5rem 1.25rem;">
+            <h2 class="section-title"><span>⚠️</span> Recent Unknown Alerts</h2>
+        </div>
+        {% if recent_unknowns %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Snapshot</th>
+                    <th>Timestamp</th>
+                    <th>Mode</th>
+                    <th>Buzzer Outcome</th>
+                    <th>Email Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in recent_unknowns %}
+                <tr>
+                    <td>
+                        {% if alert.snapshot_path %}
+                        <img src="{{ url_for('person.serve_unknown_photo', filename=alert.snapshot_path.split('/')[-1]) }}" 
+                             alt="Alert Snapshot" 
+                             onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2244%22 height=%2244%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%239ca3af%22 stroke-width=%222%22><rect x=%223%22 y=%223%22 width=%2218%22 height=%2218%22 rx=%222%22/><circle cx=%228.5%22 cy=%228.5%22 r=%221.5%22/><path d=%22M21 15l-5-5L5 21%22/></svg>';"
+                             style="width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid var(--accent-red);">
+                        {% else %}
+                        <div style="width: 44px; height: 44px; border-radius: 6px; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;">⚠️</div>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.82rem; color: var(--text-muted);">{{ alert.timestamp }}</td>
+                    <td><span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd;">{{ alert.hardware_mode }}</span></td>
+                    <td>
+                        {% if alert.hardware_mode == 'VIRTUAL' %}
+                            {% if alert.esp32_triggered == 1 or not alert.notes or 'Email Error' in alert.notes %}
+                            <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd;">✓ Virtual Buzzer</span>
+                            {% else %}
+                            <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5;">⚠ Virtual Error</span>
+                            {% endif %}
+                        {% else %}
+                            {% if alert.esp32_triggered == 1 %}
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">✓ ESP32 Triggered</span>
+                            {% else %}
+                            <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5;">⚠ ESP32 Unreachable</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if alert.email_sent == 1 %}
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">✓ Email Sent</span>
+                        {% elif not stats.smtp_enabled_bool %}
+                        <span class="badge" style="background: rgba(156, 163, 175, 0.2); color: #9ca3af;">SMTP Disabled</span>
+                        {% elif alert.notes and 'Email Error' in alert.notes %}
+                        <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5;">⚠ Email Failed</span>
+                        {% else %}
+                        <span class="badge" style="background: rgba(156, 163, 175, 0.2); color: #9ca3af;">SMTP Disabled</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No unknown intruder alerts detected yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- System Settings Parameters Table -->
+<div style="margin-top: 2rem;">
+    <h2 class="section-title"><span>⚙️</span> Active System Parameters</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter Key</th>
+                    <th>Active Value</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>HARDWARE_MODE</strong></td>
+                    <td><code>{{ stats.hardware_mode }}</code></td>
+                    <td>Hardware execution mode (VIRTUAL hardware simulator mode active)</td>
+                </tr>
+                <tr>
+                    <td><strong>FACE_MATCH_THRESHOLD</strong></td>
+                    <td><code>{{ stats.face_threshold }}</code></td>
+                    <td>Euclidean distance match cutoff (lower = stricter match)</td>
+                </tr>
+                <tr>
+                    <td><strong>ESP32_IP</strong></td>
+                    <td><code>{{ stats.esp32_ip }}</code></td>
+                    <td>Local IP address reserved for physical ESP32 buzzer hardware</td>
+                </tr>
+                <tr>
+                    <td><strong>SMTP_ENABLED</strong></td>
+                    <td><code>{{ stats.smtp_enabled }}</code></td>
+                    <td>Email alert dispatch worker status</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

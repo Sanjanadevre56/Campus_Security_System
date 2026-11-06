@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Personnel Directory - Campus Security System{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="dashboard-title">Authorized Personnel Directory</h1>
+        <p class="dashboard-subtitle">Manage registered students, faculty, and staff with enrolled facial vector embeddings</p>
+    </div>
+    <div>
+        <a href="{{ url_for('person.register_person') }}" class="btn-primary" style="padding: 0.6rem 1.2rem; display: inline-block;">+ Register New Person</a>
+    </div>
+</div>
+
+<div class="table-wrapper">
+    {% if persons %}
+    <table>
+        <thead>
+            <tr>
+                <th>Photo</th>
+                <th>Person ID</th>
+                <th>Full Name</th>
+                <th>Department</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Biometric Status</th>
+                <th>Enrolled Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for person in persons %}
+            <tr>
+                <td>
+                    {% if person.photo_path %}
+                    <img src="{{ url_for('person.serve_registered_photo', filename=person.photo_path.split('/')[-1]) }}" 
+                         alt="{{ person.full_name }}" 
+                         style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-indigo);">
+                    {% else %}
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;">👤</div>
+                    {% endif %}
+                </td>
+                <td><strong><code>{{ person.person_id }}</code></strong></td>
+                <td><strong>{{ person.full_name }}</strong></td>
+                <td>{{ person.department }}</td>
+                <td>
+                    <span class="badge badge-{{ person.role.lower() }}">{{ person.role }}</span>
+                </td>
+                <td>{{ person.email if person.email else '—' }}</td>
+                <td>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7;">
+                        ✓ 128-d Vector Enrolled
+                    </span>
+                </td>
+                <td style="font-size: 0.82rem; color: var(--text-muted);">{{ person.created_at }}</td>
+                <td>
+                    <form action="{{ url_for('person.delete_person', person_id=person.person_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove {{ person.full_name }} ({{ person.person_id }}) and delete their facial encodings?');" style="margin: 0;">
+                        <button type="submit" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); font-size: 0.78rem; cursor: pointer;">
+                            Delete
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No registered personnel found in database.</p>
+        <p style="margin-top: 0.5rem;"><a href="{{ url_for('person.register_person') }}" style="color: var(--accent-blue);">Click here to register the first student or staff member &rarr;</a></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

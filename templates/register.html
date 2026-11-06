@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Register Personnel - Campus Security System{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="dashboard-title">Biometric Person Registration</h1>
+        <p class="dashboard-subtitle">Enroll authorized students and staff with consent confirmation and 128-d facial vector generation</p>
+    </div>
+    <div>
+        <a href="{{ url_for('person.list_persons') }}" class="btn-logout" style="background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.4); color: #93c5fd;">View Directory &rarr;</a>
+    </div>
+</div>
+
+<div style="max-width: 720px; margin: 0 auto;">
+    <div class="auth-card" style="max-width: 100%;">
+        <form action="{{ url_for('person.register_person') }}" method="POST" enctype="multipart/form-data">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="full_name" class="form-label">Full Name <span style="color: var(--accent-red);">*</span></label>
+                    <input type="text" id="full_name" name="full_name" class="form-control" placeholder="e.g. Dr. Sarah Jenkins" value="{{ form_data.full_name if form_data else '' }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="person_id" class="form-label">Student / Staff ID <span style="color: var(--accent-red);">*</span></label>
+                    <input type="text" id="person_id" name="person_id" class="form-control" placeholder="e.g. STU-2026-001" value="{{ form_data.person_id if form_data else '' }}" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="role" class="form-label">Role / Category <span style="color: var(--accent-red);">*</span></label>
+                    <select id="role" name="role" class="form-control" required style="background-color: var(--bg-secondary);">
+                        <option value="">-- Select Role --</option>
+                        <option value="Student" {% if form_data and form_data.role == 'Student' %}selected{% endif %}>Student</option>
+                        <option value="Faculty" {% if form_data and form_data.role == 'Faculty' %}selected{% endif %}>Faculty</option>
+                        <option value="Staff" {% if form_data and form_data.role == 'Staff' %}selected{% endif %}>Staff</option>
+                        <option value="Visitor" {% if form_data and form_data.role == 'Visitor' %}selected{% endif %}>Visitor</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="department" class="form-label">Department <span style="color: var(--accent-red);">*</span></label>
+                    <input type="text" id="department" name="department" class="form-control" placeholder="e.g. Computer Science" value="{{ form_data.department if form_data else '' }}" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label">Email Address (Optional)</label>
+                <input type="email" id="email" name="email" class="form-control" placeholder="e.g. s.jenkins@campus.edu" value="{{ form_data.email if form_data else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="photo" class="form-label">Enrollment Photo <span style="color: var(--accent-red);">*</span></label>
+                <input type="file" id="photo" name="photo" class="form-control" accept="image/jpeg,image/png,image/jpg" required onchange="previewImage(this)">
+                <small style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 0.35rem;">
+                    📌 Requirements: JPG/PNG format, max 5 MB. Must contain <strong>exactly one clear face</strong>.
+                </small>
+                
+                <div id="image_preview_box" style="display: none; margin-top: 0.75rem; text-align: center;">
+                    <img id="image_preview" src="" alt="Photo Preview" style="max-width: 160px; max-height: 160px; border-radius: var(--radius-sm); border: 2px solid var(--accent-indigo);">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <input type="checkbox" id="consent" name="consent" value="1" required style="margin-top: 0.25rem; width: 18px; height: 18px; accent-color: var(--accent-indigo);">
+                    <span style="font-size: 0.85rem; color: var(--text-main); line-height: 1.4;">
+                        <strong>Biometric Consent Confirmation:</strong> I confirm that the individual has been informed of and explicitly consented to biometric facial enrollment for campus access monitoring in accordance with security policy.
+                    </span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top: 1rem;">
+                🔒 Process Image, Extract Encodings & Save Person
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function previewImage(input) {
+    const previewBox = document.getElementById('image_preview_box');
+    const previewImg = document.getElementById('image_preview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewBox.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

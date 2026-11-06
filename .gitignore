@@ -1,0 +1,27 @@
+
+# Python virtual environments
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Dlib temporary build files
+dlib_fix/source/dlib-19.24.2/build/
+
+# Build artifacts
+*.obj
+*.iobj
+*.pdb
+*.lib
+*.exp
+*.ilk

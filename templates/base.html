@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Campus Security System{% endblock %}</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/forms.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+        <div style="display: flex; align-items: center; gap: 2rem;">
+            <div class="nav-brand">
+                <span class="brand-icon">🛡️</span>
+                <span>Campus Security AI</span>
+            </div>
+            {% if session.get('user_id') %}
+            <nav style="display: flex; gap: 1.25rem; font-size: 0.9rem; font-weight: 500;">
+                <a href="{{ url_for('auth.dashboard') }}" style="color: var(--text-main);">Dashboard</a>
+                <a href="{{ url_for('camera.camera_page') }}" style="color: var(--text-main);">Camera</a>
+                <a href="{{ url_for('person.register_person') }}" style="color: var(--text-main);">Register Person</a>
+                <a href="{{ url_for('person.list_persons') }}" style="color: var(--text-main);">Personnel Directory</a>
+            </nav>
+            {% endif %}
+        </div>
+        {% if session.get('user_id') %}
+        <div class="nav-user">
+            <span class="user-badge">Admin: <strong>{{ session.get('username', 'Administrator') }}</strong></span>
+            <a href="{{ url_for('auth.logout') }}" class="btn-logout">Log Out</a>
+        </div>
+        {% endif %}
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Flash Messages Block -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Content Block -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 AI-Based Campus Security System | Authorized Security Control Center Prototype</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

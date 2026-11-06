@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Live Camera Monitor - Campus Security System{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 class="dashboard-title">Live Camera Monitor</h1>
+        <p class="dashboard-subtitle">Operator-controlled webcam stream with real-time OpenCV face detection bounding boxes</p>
+    </div>
+    <div class="status-pills">
+        <div id="status_badge" class="mode-badge {% if is_running %}physical{% else %}virtual{% endif %}">
+            <span class="status-dot"></span>
+            <span id="status_text">STATUS: {% if is_running %}RUNNING{% else %}STOPPED{% endif %}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Controls Bar & Live Stream Layout -->
+<div style="display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start;">
+    
+    <!-- Video Stream Container -->
+    <div class="table-wrapper" style="padding: 1rem; text-align: center;">
+        <div id="video_container" style="position: relative; background: #000; border-radius: var(--radius-sm); overflow: hidden; min-height: 420px; display: flex; align-items: center; justify-content: center;">
+            <img id="video_feed" 
+                 src="{% if is_running %}{{ url_for('camera.video_feed') }}{% else %}about:blank{% endif %}" 
+                 alt="Live Security Camera Stream"
+                 style="width: 100%; max-height: 520px; object-fit: contain; display: {% if is_running %}block{% else %}none{% endif %};">
+            
+            <div id="placeholder_screen" style="display: {% if is_running %}none{% else %}flex{% endif %}; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: var(--text-muted);">
+                <div style="font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.6;">📷</div>
+                <h3 style="color: #ffffff; font-size: 1.1rem; margin-bottom: 0.5rem;">Camera Stream is Stopped</h3>
+                <p style="font-size: 0.88rem; max-width: 360px;">Click the <strong>Start Camera</strong> button to initialize the operator-controlled video preview.</p>
+            </div>
+        </div>
+        
+        <!-- Live Alert Box for Camera Errors -->
+        <div id="error_box" class="alert alert-danger" style="display: none; margin-top: 1rem; text-align: left;">
+            <span id="error_message">Camera access error.</span>
+        </div>
+    </div>
+
+    <!-- Controls Panel & Instructions -->
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <!-- Control Card -->
+        <div class="auth-card" style="max-width: 100%; padding: 1.5rem;">
+            <h3 style="font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>🎮</span> Camera Controls
+            </h3>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <button id="btn_start" onclick="startCamera()" class="btn-primary" {% if is_running %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+                    ▶ Start Live Camera
+                </button>
+
+                <button id="btn_stop" onclick="stopCamera()" class="btn-logout" style="width: 100%; text-align: center; padding: 0.75rem;" {% if not is_running %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+                    ⏹ Stop Camera Stream
+                </button>
+            </div>
+
+            <div style="margin-top: 1.25rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.4;">
+                <p><strong>Device:</strong> OpenCV Webcam (Index <code>0</code>)</p>
+                <p style="margin-top: 0.35rem;"><strong>Overlay Mode:</strong> Haar Cascade Face Detection</p>
+            </div>
+        </div>
+
+        <!-- Privacy & Safety Notice Card -->
+        <div class="auth-card" style="max-width: 100%; padding: 1.25rem; background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.25);">
+            <h4 style="font-size: 0.92rem; font-weight: 600; color: #93c5fd; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+                <span>ℹ️</span> Privacy & Safety Notice
+            </h4>
+            <p style="font-size: 0.8rem; color: var(--text-main); line-height: 1.45;">
+                This video preview is operator-controlled for campus gate monitoring. OpenCV draws green bounding boxes around detected faces for visual preview. Video frames are processed strictly in-memory and are <strong>not saved, recorded, or matched against identities</strong> in this phase.
+            </p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const videoFeed = document.getElementById('video_feed');
+const placeholder = document.getElementById('placeholder_screen');
+const btnStart = document.getElementById('btn_start');
+const btnStop = document.getElementById('btn_stop');
+const statusBadge = document.getElementById('status_badge');
+const statusText = document.getElementById('status_text');
+const errorBox = document.getElementById('error_box');
+const errorMessage = document.getElementById('error_message');
+
+const videoFeedUrl = "{{ url_for('camera.video_feed') }}";
+
+function startCamera() {
+    errorBox.style.display = 'none';
+    btnStart.disabled = true;
+    btnStart.innerText = "Initializing Camera...";
+
+    fetch("{{ url_for('camera.start_camera') }}", { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                videoFeed.src = videoFeedUrl + "?t=" + new Date().getTime();
+                videoFeed.style.display = 'block';
+                placeholder.style.display = 'none';
+                
+                statusBadge.className = 'mode-badge physical';
+                statusText.innerText = 'STATUS: RUNNING';
+
+                btnStart.innerText = "▶ Start Live Camera";
+                btnStart.disabled = true;
+                btnStart.style.opacity = '0.5';
+                btnStart.style.cursor = 'not-allowed';
+
+                btnStop.disabled = false;
+                btnStop.style.opacity = '1';
+                btnStop.style.cursor = 'pointer';
+            } else {
+                showError(data.message);
+                resetButtons(false);
+            }
+        })
+        .catch(err => {
+            showError("Network or server error while starting camera.");
+            resetButtons(false);
+        });
+}
+
+function stopCamera() {
+    btnStop.disabled = true;
+    btnStop.innerText = "Stopping...";
+
+    fetch("{{ url_for('camera.stop_camera') }}", { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            videoFeed.src = "about:blank";
+            videoFeed.style.display = 'none';
+            placeholder.style.display = 'flex';
+
+            statusBadge.className = 'mode-badge virtual';
+            statusText.innerText = 'STATUS: STOPPED';
+
+            resetButtons(false);
+        })
+        .catch(err => {
+            resetButtons(true);
+        });
+}
+
+function showError(msg) {
+    errorMessage.innerText = msg;
+    errorBox.style.display = 'block';
+}
+
+function resetButtons(isRunning) {
+    btnStart.innerText = "▶ Start Live Camera";
+    btnStop.innerText = "⏹ Stop Camera Stream";
+
+    if (isRunning) {
+        btnStart.disabled = true;
+        btnStart.style.opacity = '0.5';
+        btnStart.style.cursor = 'not-allowed';
+
+        btnStop.disabled = false;
+        btnStop.style.opacity = '1';
+        btnStop.style.cursor = 'pointer';
+    } else {
+        btnStart.disabled = false;
+        btnStart.style.opacity = '1';
+        btnStart.style.cursor = 'pointer';
+
+        btnStop.disabled = true;
+        btnStop.style.opacity = '0.5';
+        btnStop.style.cursor = 'not-allowed';
+    }
+}
+</script>
+{% endblock %}
